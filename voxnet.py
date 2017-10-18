@@ -156,7 +156,7 @@ class Voxnet(object):
         onehot_labels = tf.one_hot(indices=tf.cast(labels, tf.int32), depth=self.num_classes)
         loss = tf.losses.softmax_cross_entropy(
             onehot_labels=onehot_labels, logits=logits)
-
+        tf.summary.scalar("loss_voxel", loss)
         # Configure the Training Op (for TRAIN mode)
         if mode == tf.estimator.ModeKeys.TRAIN:
             optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
@@ -173,8 +173,9 @@ class Voxnet(object):
             mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
 
-def main(unused_argv,data_folder='./',batch_size=32,epochs=8):
+def main(unused_argv,data_folder='./',batch_size=8,epochs=8):
     """
+    The main function for voxnet training and evaluation.
     """
     voxet = Voxnet()
     # Voxnet Estimator: model init
@@ -201,15 +202,15 @@ def main(unused_argv,data_folder='./',batch_size=32,epochs=8):
     train_input_fn = tf.estimator.inputs.numpy_input_fn(
         x={"x": train_data},
         y=train_labels,
-        batch_size=8,
-        num_epochs=8,
+        batch_size=batch_size,
+        num_epochs=epochs,
         shuffle=True)
 
     print ('train start')
 
     voxel_classifier.train(
         input_fn=train_input_fn,
-        steps=500,
+        steps=2000,
         hooks=[logging_hook])
     
     print('train done')
