@@ -91,6 +91,7 @@ def get_all_data(data_folder, mode='train', type='dense'):
 
 def save_inference_sample():
     """
+    # TODO:(vincent.cheung.mcer@gmail.com) to collect voxels and predicted labels
     """
     pass
 
@@ -103,13 +104,19 @@ class Voxnet(object):
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.epochs = epochs
+        # to enable tf logging info
+        tf.logging.set_verbosity(tf.logging.INFO)
 
     def voxnet_fn(self, features, labels, mode):
         """
         Voxnet tensorflow graph.
+        It follows description from this TensorFlow tutorial:
+        `https://www.tensorflow.org/versions/master/tutorials/mnist/pros/index.html#deep-mnist-for-experts`
         
         Args:
-        `x`:tf.placeholder for input, e.g.`tf.placeholder(tf.float32,(None,voxel_size[0],voxel_size[1],voxel_size[2],1))`
+        `features`:default paramter for tf.model_fn
+        `labels`:default paramter for tf.model_fn
+        `mode`:default paramter for tf.model_fn
 
         Ret:
         `EstimatorSpec`:    predictions/loss/train_op/eval_metric_ops in EstimatorSpec object
@@ -165,7 +172,8 @@ class Voxnet(object):
         return tf.estimator.EstimatorSpec(
             mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
-def main(unused_argv,data_folder='./',batch_size=32,epochs=64):
+
+def main(unused_argv,data_folder='./',batch_size=32,epochs=8):
     """
     """
     voxet = Voxnet()
@@ -187,18 +195,21 @@ def main(unused_argv,data_folder='./',batch_size=32,epochs=64):
     # Set up logging for predictions
     tensors_to_log = {"probabilities": "softmax_tensor"}
     logging_hook = tf.train.LoggingTensorHook(
-        tensors=tensors_to_log, every_n_iter=50)
+        tensors=tensors_to_log, every_n_iter=10)
 
     # Train the model
     train_input_fn = tf.estimator.inputs.numpy_input_fn(
         x={"x": train_data},
         y=train_labels,
-        batch_size=batch_size,
-        num_epochs=epochs,
+        batch_size=8,
+        num_epochs=8,
         shuffle=True)
+
+    print ('train start')
 
     voxel_classifier.train(
         input_fn=train_input_fn,
+        steps=500,
         hooks=[logging_hook])
     
     print('train done')
@@ -213,9 +224,5 @@ def main(unused_argv,data_folder='./',batch_size=32,epochs=64):
     print(eval_results)
 
 if __name__ == '__main__':
-    # # test for generator output
-    # for g,l in gen_batch_function('./',4):
-    #     print g,l
-    # voxet = Voxnet()
-    # voxet.run()
+    # run the main function and model_fn, according to Tensorflow R1.3 API
     tf.app.run(main=main, argv=['./'])
