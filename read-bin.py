@@ -1,3 +1,4 @@
+#!/usr/bin/python2
 # -*- coding: utf-8 -*-
 """ Simple example for loading object binary data. """
 import numpy as np
@@ -61,7 +62,7 @@ def points_to_voxel(points,voxel_size=(24,24,24),padding_to_size=(32,32,32),reso
     points[:,0] = points[:,0] - min_box_coor[0]
     points[:,1] = points[:,1] - min_box_coor[1]
     points[:,2] = points[:,2] - min_box_coor[2]
-
+    # logical condition index
     x_logical = np.logical_and((points[:, 0] < voxel_size[0]*resolution), (points[:, 0] >= 0))
     y_logical = np.logical_and((points[:, 1] < voxel_size[0]*resolution), (points[:, 1] >= 0))
     z_logical = np.logical_and((points[:, 2] < voxel_size[0]*resolution), (points[:, 2] >= 0))
@@ -71,6 +72,7 @@ def points_to_voxel(points,voxel_size=(24,24,24),padding_to_size=(32,32,32),reso
     # Init voxel grid with zero padding_to_size=(32*32*32) and set the occupany grid
     voxel = np.zeros(padding_to_size)
     center_points = inside_box_points+(padding_to_size[0]-voxel_size[0])*resolution/2 #centerlized
+    # TODO:(vincent.cheung.mcer@gmail.com) currently just use the binary occupany grid
     voxel[(center_points[:, 0]/resolution).astype(int), (center_points[:, 1]/resolution).astype(int), (center_points[:, 2]/resolution).astype(int)] = 1
     # print np.count_nonzero(voxel)
     # print np.unique((center_points/resolution).astype(int),axis=0).shape
@@ -153,7 +155,7 @@ def data_augmentation(points,voxel_size=(24,24,24),padding_to_size=(32,32,32),re
         # rotate points
         rot_points = points_rotation(points=points,rot_rad=2*np.pi/step)
         # rotated points voxelization and centerlization
-        voxel, inside_box_points = points_to_voxel(points=rot_points)
+        voxel, inside_box_points = points_to_voxel(points=rot_points,resolution=resolution)
         voxel_list.append(voxel)
         inside_box_points_list.append(inside_box_points)
 
@@ -178,7 +180,7 @@ if __name__=='__main__':
             #P = points_rotation(P,np.pi/2).astype(np.float32)
             #voxel,scale_points = points_to_voxel(P)
             steps = 12
-            voxel_list, scale_points_list = data_augmentation(points=P,rot_step=steps)
+            voxel_list, scale_points_list = data_augmentation(points=P,rot_step=steps,resolution=0.2)
             print ('processsing {} in {}'.format(file_name,fold))
             # print P.shape
             # print voxel.shape,scale_points.shape
@@ -197,8 +199,8 @@ if __name__=='__main__':
                 if scale_points.shape[0]>0:
                     success_cnt+=1
                     cloud=pcl.PointCloud(scale_points.astype(np.float32))
-                    pcl.save(cloud,'./pcd_voxel2/{}_{}.pcd'.format(file_name.split('.bin')[0],idx))
-                    np.save('./voxel_npy/{}_{}.npy'.format(file_name.split('.bin')[0],idx),voxel)
+                    pcl.save(cloud,'./pcd_voxel2_r2/{}_{}.pcd'.format(file_name.split('.bin')[0],idx))
+                    np.save('./voxel_npy_eval_r2/{}_{}.npy'.format(file_name.split('.bin')[0],idx),voxel)
                 else:
                     print ('processed {} is empty'.format(file_name))
 

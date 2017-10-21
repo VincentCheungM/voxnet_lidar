@@ -71,7 +71,7 @@ def get_all_data(data_folder, mode='train', type='dense'):
     `grids`:list of voxel grids
     `labels`:list of labels
     """
-    sub_path = 'voxel_npy_'+mode
+    sub_path = 'voxel_npy_'+mode+'_r2'
     grid_paths = glob(os.path.join(data_folder, sub_path, '*.npy'))
     
     # TODO:(vincent.cheung.mcer@gmail.com) not yet add support for multiresolution npy data
@@ -93,6 +93,11 @@ def save_inference_sample():
     """
     # TODO:(vincent.cheung.mcer@gmail.com) to collect voxels and predicted labels
     """
+    voxet = Voxnet()
+    # Voxnet Estimator: model init
+    voxel_classifier = tf.estimator.Estimator(
+        model_fn=voxet.voxnet_fn, model_dir='./voxnet/')
+    #voxel_classifier.predict(input_fn=,)
     pass
 
 class Voxnet(object):
@@ -124,7 +129,7 @@ class Voxnet(object):
         input_layer = tf.reshape(features['x'], [-1, 32, 32, 32, 1])
         # Layer 1: 3D conv(filters_num=32, filter_kernel_size=5, strides=2)
         # Input(32*32*32), Output:(14*14*14)*32
-        conv1 = tf.layers.conv3d(inputs=input_layer, filters=32, kernel_size=[5,5,5], strides=[2,2,2],name='conv1')
+        conv1 = tf.layers.conv3d(inputs=input_layer, filters=32, kernel_size=[5,5,5], strides=[2,2,2],name='conv1',activation=)
         # Layer 2: 3D conv(filters_num=32, filter_kernel_size=3, strides=1)
         # Max-pooling (2*2*2)
         # Input(32*32*32)*32, Output:(6*6*6)*32
@@ -173,7 +178,7 @@ class Voxnet(object):
             mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
 
-def main(unused_argv,data_folder='./',batch_size=8,epochs=8):
+def main(unused_argv,data_folder='./',batch_size=32,epochs=8):
     """
     The main function for voxnet training and evaluation.
     """
@@ -210,7 +215,7 @@ def main(unused_argv,data_folder='./',batch_size=8,epochs=8):
 
     voxel_classifier.train(
         input_fn=train_input_fn,
-        steps=2000,
+        steps=5000,
         hooks=[logging_hook])
     
     print('train done')
