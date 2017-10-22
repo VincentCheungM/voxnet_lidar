@@ -129,7 +129,7 @@ class Voxnet(object):
         input_layer = tf.reshape(features['x'], [-1, 32, 32, 32, 1])
         # Layer 1: 3D conv(filters_num=32, filter_kernel_size=5, strides=2)
         # Input(32*32*32), Output:(14*14*14)*32
-        conv1 = tf.layers.conv3d(inputs=input_layer, filters=32, kernel_size=[5,5,5], strides=[2,2,2],name='conv1',activation=)
+        conv1 = tf.layers.conv3d(inputs=input_layer, filters=32, kernel_size=[5,5,5], strides=[2,2,2],name='conv1')
         # Layer 2: 3D conv(filters_num=32, filter_kernel_size=3, strides=1)
         # Max-pooling (2*2*2)
         # Input(32*32*32)*32, Output:(6*6*6)*32
