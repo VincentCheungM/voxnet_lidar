@@ -14,6 +14,9 @@ import random
 SUOD_label_dictionary = {'4wd': 0, 'building': 1, 'bus': 2, 'car': 3, 'pedestrian': 4, 'pillar': 5, 'pole': 6,
                     'traffic_lights': 7, 'traffic_sign': 8, 'tree': 9, 'truck': 10, 'trunk': 11, 'ute': 12,
                     'van': 13}
+SUOD_label_dictionary_rev = { '0':'4wd', '1':'building', '2':'bus', '3': 'car', '4': 'pedestrian', '5': 'pillar', '6': 'pole',
+                    '7': 'traffic_lights', '8': 'traffic_sign', '9': 'tree', '10': 'truck', '11': 'trunk', '12': 'ute',
+                    '13': 'van'}
 
 # TODO: (vincent.cheung.mcer@gmail.com) combine generator `gen_batch_function` and data collector `get_all_data` into a class
 def gen_batch_function(data_folder,batch_size):
@@ -89,16 +92,50 @@ def get_all_data(data_folder, mode='train', type='dense'):
         grids.append(grid)
     return grids, labels
 
-def save_inference_sample():
+def save_inference_sample(argv):
     """
-    # TODO:(vincent.cheung.mcer@gmail.com) to collect voxels and predicted labels
+    Print the predicted class and ground truth class.
+
+    Args:
+    `argv`:['./',model_dir,data_folder] a tuple of args.
+    `model_dir`:the folder of trained model
+    `data_folder`:the folder of `*.npy` data to be inferred
     """
+    # Use default setting
+    if len(argv) != 3:
+        print ('len(argv) is {}, use default setting'.format(len(argv)))
+        model_dir = './voxnet_r2_bk/'
+        data_folder = './'
+    else:
+        model_dir = argv[1]
+        data_folder = argv[2]
+
     voxet = Voxnet()
     # Voxnet Estimator: model init
     voxel_classifier = tf.estimator.Estimator(
-        model_fn=voxet.voxnet_fn, model_dir='./voxnet/')
-    #voxel_classifier.predict(input_fn=,)
-    pass
+        model_fn=voxet.voxnet_fn, model_dir=model_dir)
+
+    # Evaluating data collector
+    eval_grids_list, eval_labels_list = get_all_data(data_folder,mode='eval')
+    eval_data = np.array(eval_grids_list)
+    eval_labels = np.array(eval_labels_list)
+
+    # Evaluate the model and print results
+    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+    x={"x": eval_data},
+    num_epochs=1,
+    shuffle=False)
+    # Get predictions
+    predictions = voxel_classifier.predict(input_fn=eval_input_fn)
+
+    # Print results
+    for dict_predict, gt in zip(predictions,eval_labels):
+        print ('predicted class:{}-{}, ground truth:{}-{}'.format(dict_predict['classes'],
+        SUOD_label_dictionary_rev[str(dict_predict['classes'])],
+        gt,
+        SUOD_label_dictionary_rev[str(gt)]
+        ))
+    # TODO: (vincent.cheung.mcer@gmail.com) to count TP\FP\TN\FN of different classes and adding top-3 class score
 
 class Voxnet(object):
     def __init__(self, learning_rate=0.001, num_classes=14, batch_size=32, epochs=64):
@@ -178,7 +215,7 @@ class Voxnet(object):
             mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
 
-def main(unused_argv,data_folder='./',batch_size=32,epochs=8):
+def main(argv,data_folder='./',batch_size=32,epochs=8):
     """
     The main function for voxnet training and evaluation.
     """
@@ -231,4 +268,5 @@ def main(unused_argv,data_folder='./',batch_size=32,epochs=8):
 
 if __name__ == '__main__':
     # run the main function and model_fn, according to Tensorflow R1.3 API
-    tf.app.run(main=main, argv=['./'])
+    #tf.app.run(main=main, argv=['./'])
+    tf.app.run(main=save_inference_sample, argv=['./','./voxnet_r2_bk/','./'])
