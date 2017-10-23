@@ -128,22 +128,20 @@ def save_inference_sample(argv):
     # Get predictions
     predictions = voxel_classifier.predict(input_fn=eval_input_fn)
 
-    TP = np.zeros(14)
-    TN = np.zeros(14)
-    FP = np.zeros(14)
-    FN = np.zeros(14)
-    lab=[]
-    prd=[]
+    # list for F1 score calculations
+    lab=[]# label
+    prd=[]# predictions
     # Print results
     for dict_predict, gt in zip(predictions,eval_labels):
-        lab.append(gt)
-        prd.append(dict_predict['classes'])
+        lab.append(gt)# adding label list
+        prd.append(dict_predict['classes'])# adding prediction list
         print ('predicted class:{}-{}, ground truth:{}-{}'.format(dict_predict['classes'],
         SUOD_label_dictionary_rev[str(dict_predict['classes'])],
         gt,
         SUOD_label_dictionary_rev[str(gt)]
         ))
 
+    # F1 score calculations
     import sklearn.metrics
     print ('The F1 score of current model:{} is {}'.format(model_dir,sklearn.metrics.f1_score(lab,prd,average='weighted')))
 
@@ -219,12 +217,26 @@ def inference(argv):
     predictions = voxel_classifier.predict(input_fn=eval_input_fn)
 
     # Print results
+    top_k = 3
     for dict_predict,gt in zip(predictions,eval_labels):
         print ('predicted class:{}-{}, file name:{}'.format(
             dict_predict['classes'],
             SUOD_label_dictionary_rev[str(dict_predict['classes'])],
             gt))
-    # TODO: (vincent.cheung.mcer@gmail.com) to count TP\FP\TN\FN of different classes and adding top-3 class score
+        # Top K label, k =3
+        """
+        Code sample of top k index
+        In [1]: import numpy as np
+        In [2]: arr = np.array([1, 3, 2, 4, 5])
+        In [3]: arr.argsort()[-3:][::-1]
+        Out[3]: array([4, 3, 1])...
+        """
+        arr = dict_predict['probabilities']
+        idx = arr.argsort()[-top_k:][::-1]
+        print ('Top K label:{} {} {}'.format(SUOD_label_dictionary_rev[str(idx[0])],
+            SUOD_label_dictionary_rev[str(idx[1])],
+            SUOD_label_dictionary_rev[str(idx[2])]))
+
 
 class Voxnet(object):
     def __init__(self, learning_rate=0.001, num_classes=14, batch_size=32, epochs=64):
@@ -358,5 +370,5 @@ def main(argv,data_folder='./',batch_size=32,epochs=8):
 if __name__ == '__main__':
     # run the main function and model_fn, according to Tensorflow R1.3 API
     #tf.app.run(main=main, argv=['./'])
-    tf.app.run(main=save_inference_sample, argv=['./','./voxnet_r2_bk/','./'])
-    #tf.app.run(main=inference, argv=['./','./voxnet_r2_bk/','./'])
+    #tf.app.run(main=save_inference_sample, argv=['./','./voxnet_r2_bk/','./'])
+    tf.app.run(main=inference, argv=['./','./voxnet_r2_bk/','./'])
