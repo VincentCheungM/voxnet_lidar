@@ -128,13 +128,102 @@ def save_inference_sample(argv):
     # Get predictions
     predictions = voxel_classifier.predict(input_fn=eval_input_fn)
 
+    TP = np.zeros(14)
+    TN = np.zeros(14)
+    FP = np.zeros(14)
+    FN = np.zeros(14)
+    lab=[]
+    prd=[]
     # Print results
     for dict_predict, gt in zip(predictions,eval_labels):
+        lab.append(gt)
+        prd.append(dict_predict['classes'])
         print ('predicted class:{}-{}, ground truth:{}-{}'.format(dict_predict['classes'],
         SUOD_label_dictionary_rev[str(dict_predict['classes'])],
         gt,
         SUOD_label_dictionary_rev[str(gt)]
         ))
+
+    import sklearn.metrics
+    print ('The F1 score of current model:{} is {}'.format(model_dir,sklearn.metrics.f1_score(lab,prd,average='weighted')))
+
+    # TODO: (vincent.cheung.mcer@gmail.com) to count TP\FP\TN\FN of different classes and adding top-3 class score
+
+def get_infer_data(data_folder, sub_path = 'test_data_npy_eval_r2', type='dense'):
+    """
+    Get all voxels and corresponding labels from `data_folder`.
+
+    Args:
+    `data_folder`:path to the folder that contains `voxel_npy_train` and `voxel_npy_eval`.
+    `sub_path`:folder that contains all the `npy` datasets 
+    `type`:type of npy for future use in sparse tensor, values={`dense`,`sparse`} 
+
+    Ret:
+    `grids`:list of voxel grids
+    `labels`:list of labels
+    """
+    sub_path = sub_path
+    grid_paths = glob(os.path.join(data_folder, sub_path, '*.npy'))
+    
+    # TODO:(vincent.cheung.mcer@gmail.com) not yet add support for multiresolution npy data
+    # TODO:(vincent.cheung.mcer@gmail.com) not yet support sparse npy
+    # grid_paths_r2 = glob(os.path.join(data_folder, 'voxel_npy_r2', '*.npy'))    
+    grids=[]
+    labels=[]
+    for grid_path in grid_paths:
+        # extract the label from path+file_name: e.g.`./voxel_npy/pillar.2.3582_12.npy`
+        file_name = grid_path.split('/')[-1] #`pillar.2.3582_12.npy`
+        label = file_name.split('.')[0]#dict[`pillar`]
+        # load *.npy
+        grid = np.load(grid_path).astype(np.float32)
+        labels.append(label)
+        grids.append(grid)
+    return grids, labels
+
+def inference(argv):
+    """
+    Print the predicted class and ground truth class.
+
+    Args:
+    `argv`:['./',model_dir,data_folder] a tuple of args.
+    `model_dir`:the folder of trained model
+    `data_folder`:the folder of `*.npy` data to be inferred
+    """
+    # Use default setting
+    if len(argv) != 4:
+        print ('len(argv) is {}, use default setting'.format(len(argv)))
+        model_dir = './voxnet_r2_bk/'
+        data_folder = './'
+        sub_path = 'test_data_npy_eval_r2'
+    else:
+        model_dir = argv[1]
+        data_folder = argv[2]
+        sub_path = argv[3]
+
+    voxet = Voxnet()
+    # Voxnet Estimator: model init
+    voxel_classifier = tf.estimator.Estimator(
+        model_fn=voxet.voxnet_fn, model_dir=model_dir)
+
+    # Evaluating data collector
+    eval_grids_list, eval_labels_list = get_infer_data(data_folder,sub_path)
+    eval_data = np.array(eval_grids_list)
+    eval_labels = np.array(eval_labels_list)
+
+    # Evaluate the model and print results
+    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+    x={"x": eval_data},
+    num_epochs=1,
+    shuffle=False)
+    # Get predictions
+    predictions = voxel_classifier.predict(input_fn=eval_input_fn)
+
+    # Print results
+    for dict_predict,gt in zip(predictions,eval_labels):
+        print ('predicted class:{}-{}, file name:{}'.format(
+            dict_predict['classes'],
+            SUOD_label_dictionary_rev[str(dict_predict['classes'])],
+            gt))
     # TODO: (vincent.cheung.mcer@gmail.com) to count TP\FP\TN\FN of different classes and adding top-3 class score
 
 class Voxnet(object):
@@ -270,3 +359,4 @@ if __name__ == '__main__':
     # run the main function and model_fn, according to Tensorflow R1.3 API
     #tf.app.run(main=main, argv=['./'])
     tf.app.run(main=save_inference_sample, argv=['./','./voxnet_r2_bk/','./'])
+    #tf.app.run(main=inference, argv=['./','./voxnet_r2_bk/','./'])
